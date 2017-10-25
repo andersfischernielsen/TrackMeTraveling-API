@@ -36,6 +36,7 @@ async function saveCoordinates(latitude: number, longitude: number): Promise<any
     try {
         let Coordinates = sequelize.define('coordinate', {
             id: { type: Sequelize.UUIDV4, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
+            username: Sequelize.STRING,
             latitude: Sequelize.DOUBLE,
             longitude: Sequelize.DOUBLE
         });
