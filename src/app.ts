@@ -27,18 +27,15 @@ function initSequelize() : Sequelize.Sequelize {
 }
 
 async function verifySequelize(sequelize: Sequelize.Sequelize) {
-    try {
-        await sequelize.authenticate();
-    } catch (e) {
-        console.error('[Sequelize] Unable to connect to the database: ', e);
-    }
+    try { await sequelize.authenticate(); } 
+    catch (e) { console.error('[Sequelize] Unable to connect to the database: ', e); }
 }
 
 async function saveCoordinates(username: string, latitude: number, longitude: number): Promise<boolean> {
     try {
         let coordinates = sequelize.define('coordinate', {
             id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
-            username: Sequelize.STRING,
+            username: { type: Sequelize.STRING, allowNull: false },
             latitude: Sequelize.DOUBLE,
             longitude: Sequelize.DOUBLE
         });
