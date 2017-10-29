@@ -15,6 +15,7 @@ async function verifySequelize(sequelize: Sequelize.Sequelize) {
 }
 
 async function saveCoordinates(username: string, latitude: number, longitude: number) {
+    if (!instance) return false;
     let coordinates = instance.define('coordinate', {
         id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
         username: { type: Sequelize.STRING, allowNull: false },
@@ -28,6 +29,7 @@ async function saveCoordinates(username: string, latitude: number, longitude: nu
 
 async function initialise() {
     instance = initSequelize();
+    if (!instance) return false;
     return await verifySequelize(instance);
 }
 
