@@ -1,5 +1,6 @@
 import * as Sequelize from "sequelize";
 import { databaseConfig as config } from "./configuration";
+import * as bcrypt from "bcrypt";
 
 var instance : Sequelize.Sequelize;
 var coordinates : Sequelize.Model<any, any>;
@@ -14,17 +15,9 @@ function initSequelize() : Sequelize.Sequelize {
 async function setUp(sequelize: Sequelize.Sequelize) {
     try { 
         await sequelize.authenticate(); 
-        coordinates = instance.define('coordinate', {
-            id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
-            username: { type: Sequelize.STRING, allowNull: false },
-            latitude: Sequelize.DOUBLE,
-            longitude: Sequelize.DOUBLE
-        });
-        users = instance.define('user', {
-            username: { type: Sequelize.STRING, primaryKey: true },
-            email: { type: Sequelize.STRING, allowNull: false },
-            password: { type: Sequelize.STRING, allowNull: false },            
-        });
+        let models =  defineModels();
+        coordinates = models.coordinates;
+        users = models.users;
         await coordinates.sync();
         await users.sync();
         await users.findOrCreate({ where: {username: "fischer", email: "f@f.com", password: "bla bla" }});
@@ -34,6 +27,32 @@ async function setUp(sequelize: Sequelize.Sequelize) {
         console.error('[Sequelize] Unable to set up database: ', e); 
         return false; 
     }
+}
+
+function defineModels() {
+    coordinates = instance.define('coordinate', {
+        id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
+        username: { type: Sequelize.STRING, allowNull: false },
+        latitude: Sequelize.DOUBLE,
+        longitude: Sequelize.DOUBLE
+    });
+    users = instance.define('user', {
+            username: { type: Sequelize.STRING, primaryKey: true },
+            email: { type: Sequelize.STRING, allowNull: false },
+            password: { type: Sequelize.STRING, allowNull: false }
+        }, 
+        {   
+            instanceMethods: {
+                generateHash: async (password:string) => await bcrypt.hash(password, await bcrypt.genSalt(8), null),
+                validPassword: async (password:string) => await bcrypt.compare(password, this.password)
+            },
+            hooks: {
+                beforeCreate: async (user, options) => await user.generateHash(user.password)
+            }
+        }
+    );
+
+    return { coordinates, users };
 }
 
 async function saveCoordinates(username: string, latitude: number, longitude: number) {
@@ -51,9 +70,9 @@ async function initialise() {
 
 async function authenticateUser(username:string, password:string) {
     if (!instance || !users) return { userExists: false, user: undefined };
-    await users.sync();
-    let found = await users.findOne({where: { username: username, password: password }});
-    return {userExists: found === undefined, user: found};
+    let found = await users.findOne({where: { username: username }});
+    if (!found.validPassword(password)) return { userExists: false, user: undefined }
+    return { userExists: found === undefined, user: found };
 }
 
 export { initialise, saveCoordinates, authenticateUser }
