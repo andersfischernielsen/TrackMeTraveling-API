@@ -1,5 +1,5 @@
 import * as Sequelize from "sequelize";
-import { databaseConfig as config } from "./configuration";
+import { databaseConfig as config, saltRounds, defaultUser } from "./configuration";
 import * as bcrypt from "bcrypt";
 
 var instance : Sequelize.Sequelize;
@@ -15,12 +15,11 @@ function initSequelize() : Sequelize.Sequelize {
 async function setUp(sequelize: Sequelize.Sequelize) {
     try { 
         await sequelize.authenticate(); 
-        let models =  defineModels();
-        coordinates = models.coordinates;
-        users = models.users;
-        await coordinates.sync();
-        await users.sync();
-        await users.findOrCreate({ where: {username: "fischer", email: "f@f.com", password: "bla bla" }});
+        let models = await defineModels();
+        coordinates = models.coordinates; users = models.users;
+        await users.findCreateFind({ where: 
+            { username: defaultUser.username, email: defaultUser.email, password: defaultUser.password }
+        });
         return true; 
     } 
     catch (e) { 
@@ -29,29 +28,31 @@ async function setUp(sequelize: Sequelize.Sequelize) {
     }
 }
 
-function defineModels() {
+async function defineModels() {
     coordinates = instance.define('coordinate', {
         id: { type: Sequelize.UUID, primaryKey: true, defaultValue: Sequelize.UUIDV4 },
         username: { type: Sequelize.STRING, allowNull: false },
         latitude: Sequelize.DOUBLE,
         longitude: Sequelize.DOUBLE
     });
+    
     users = instance.define('user', {
             username: { type: Sequelize.STRING, primaryKey: true },
             email: { type: Sequelize.STRING, allowNull: false },
             password: { type: Sequelize.STRING, allowNull: false }
         }, 
-        {   
-            instanceMethods: {
-                generateHash: async (password:string) => await bcrypt.hash(password, await bcrypt.genSalt(8), null),
-                validPassword: async (password:string) => await bcrypt.compare(password, this.password)
-            },
+        {
             hooks: {
-                beforeCreate: async (user, options) => await user.generateHash(user.password)
+                beforeCreate: async (user, options) => {
+                    let salt = await bcrypt.genSalt(saltRounds);
+                    let hash = await bcrypt.hash(user.password, salt)
+                    user.password = hash;
+                }
             }
         }
     );
-
+    await coordinates.sync();
+    await users.sync();
     return { coordinates, users };
 }
 
@@ -68,11 +69,29 @@ async function initialise() {
     return await setUp(instance);
 }
 
+let isValidPassword = async (password:string, hashed: string) => 
+    await bcrypt.compare(password, hashed)
+
 async function authenticateUser(username:string, password:string) {
+    //TODO: Implement union type for error types.
     if (!instance || !users) return { userExists: false, user: undefined };
     let found = await users.findOne({where: { username: username }});
-    if (!found.validPassword(password)) return { userExists: false, user: undefined }
-    return { userExists: found === undefined, user: found };
+    if (!found) return { userExists: false, user: undefined };
+    try {
+        if (await isValidPassword(password, found.password)) 
+            return { userExists: true, user: found };
+        return { userExists: true, user: undefined }
+    } catch (e) {
+        return { userExists: true, user: undefined };
+    }
+}
+
+async function createUser(username:string, email: string, password:string) {
+    if (!instance || !users) return undefined;
+    let found = await users.findOne({where: { username: username }});
+    if (found) return undefined;
+    let user = await users.create({ where: {username: "fischer", email: "f@f.com", password: "bla bla" }});
+    return user;
 }
 
 export { initialise, saveCoordinates, authenticateUser }

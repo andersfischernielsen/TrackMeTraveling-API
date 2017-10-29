@@ -29,7 +29,6 @@ function generateToken(req:any, res:Response, next:any) {
 
 let respond = (req:any, res:Response) =>
     res.status(200).json({
-        user: req.user,
         token: req.token
     });
 
