@@ -17,9 +17,7 @@ async function setUp(sequelize: Sequelize.Sequelize) {
         await sequelize.authenticate(); 
         let models = await defineModels();
         coordinates = models.coordinates; users = models.users;
-        await users.findCreateFind({ where: 
-            { username: defaultUser.username, email: defaultUser.email, password: defaultUser.password }
-        });
+        await createDefaultUser();
         return true; 
     } 
     catch (e) { 
@@ -58,8 +56,7 @@ async function defineModels() {
 
 async function saveCoordinates(username: string, latitude: number, longitude: number) {
     if (!instance || !coordinates) return false;
-    await coordinates.sync();
-    var created = await coordinates.create({username: username, latitude: latitude, longitude: longitude});
+    await coordinates.create({username: username, latitude: latitude, longitude: longitude});
     return true;
 }
 
@@ -69,8 +66,11 @@ async function initialise() {
     return await setUp(instance);
 }
 
-let isValidPassword = async (password:string, hashed: string) => 
+let passwordsMatch = async (password:string, hashed: string) => 
     await bcrypt.compare(password, hashed)
+
+let createDefaultUser = async () => 
+    users.findCreateFind({ where: { username: defaultUser.username, email: defaultUser.email, password: defaultUser.password }});
 
 async function authenticateUser(username:string, password:string) {
     //TODO: Implement union type for error types.
@@ -78,7 +78,7 @@ async function authenticateUser(username:string, password:string) {
     let found = await users.findOne({where: { username: username }});
     if (!found) return { userExists: false, user: undefined };
     try {
-        if (await isValidPassword(password, found.password)) 
+        if (await passwordsMatch(password, found.password)) 
             return { userExists: true, user: found };
         return { userExists: true, user: undefined }
     } catch (e) {
@@ -86,12 +86,17 @@ async function authenticateUser(username:string, password:string) {
     }
 }
 
-async function createUser(username:string, email: string, password:string) {
+async function saveUser(username:string, email: string, password:string) {
     if (!instance || !users) return undefined;
-    let found = await users.findOne({where: { username: username }});
+    let found = await users.findOne({ where: {
+        [Sequelize.Op.or]: {
+            username: { [Sequelize.Op.eq]: username },
+            email: { [Sequelize.Op.eq]: email },
+        }}
+    });
     if (found) return undefined;
-    let user = await users.create({ where: {username: "fischer", email: "f@f.com", password: "bla bla" }});
+    let user = await users.create({ username: username, email: email, password: password });
     return user;
 }
 
-export { initialise, saveCoordinates, authenticateUser }
+export { initialise, saveCoordinates, authenticateUser, saveUser }
