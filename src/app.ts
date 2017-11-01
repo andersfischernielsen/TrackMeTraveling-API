@@ -5,18 +5,28 @@ import * as Sequelize from "sequelize";
 import * as database from "./database";
 import * as passport from "./passport";
 
+//Setup
 const app = express();
-var initialised = database.initialise();
-if (app === undefined || !initialised) process.exit();
-
+if (app === undefined || !database.initialise()) process.exit();
 let port = Number(process.env.PORT) || 5000;
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(passport.initialize());  
+app.use(passport.initialize());
+
+//Helper functions
+let saveRefreshTokenForUser = async (req:any, res:any, next:any) => {
+    await database.saveRefreshTokenForUser(req.body.username, req.body.refresh_token);
+    next();
+}
+
+let refreshTokenIsValid = async (req:any, res:any, next:any) => {
+    let valid = await database.refreshTokenIsValid(req.body.username, req.body.refresh_token);
+    if (!valid) return res.send(401);
+    next();
+}
 
 //Routes
-app.get("/", (req, res) => res.send("API running."));
-
 app.post("/coordinates", passport.authenticateJWT(), async (req, res) => {
     let result = await database.saveCoordinates(req.body.username, req.body.latitude, req.body.longitude);
     return res.send(result === true ? 200 : 500);
@@ -27,18 +37,18 @@ app.post('/user', async (req, res) => {
     return res.send(created ? 200 : 409);
 });
 
-app.post('/auth', passport.authenticate(), passport.serialize, passport.generateToken, passport.respond);
+app.post('/auth', 
+    passport.authenticate(),
+    passport.serialize,
+    passport.generateToken,
+    saveRefreshTokenForUser,
+    passport.respond
+);
 
-app.post('refreshtoken', 
-    async (req, res, next) => {
-        if (database.refreshTokenIsValid(req.body.username, req.body.refresh_token)) next();
-        else { return res.send(401) }
-    },
-    passport.generateToken, 
-    async (req, res, next) => { 
-        database.saveRefreshTokenForUser(req.body.username, req.body.refresh_token);
-        next();
-    },
+app.post('/refreshtoken',
+    refreshTokenIsValid,
+    passport.generateToken,
+    saveRefreshTokenForUser,
     passport.respond
 );
 

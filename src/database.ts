@@ -108,11 +108,16 @@ async function saveUser(username:string, email: string, password:string) {
 }
 
 async function refreshTokenIsValid(username:string, refreshToken: string) {
-    return true;
+    let found = await userTokens.findOne({ where: {
+            username: username,
+            token: refreshToken,
+        }});
+    return found !== undefined;
 }
 
 async function saveRefreshTokenForUser(username:string, refreshToken: string) {
-    return true;
+    let created = await userTokens.create({ username: username, token: refreshToken });    
+    return created !== undefined;
 }
 
 export { initialise, saveCoordinates, authenticateUser, saveUser, refreshTokenIsValid, saveRefreshTokenForUser }

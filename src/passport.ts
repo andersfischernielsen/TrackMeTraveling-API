@@ -32,13 +32,12 @@ function generateToken(req:any, res:Response, next:any) {
     req.access_token = jwt.sign(
         { id: req.user.id }, 
         config.secret, 
-        { expiresIn: "5m" }
+        { expiresIn: "2h" }
     );
     req.refresh_token = jwt.sign(
-        crypto.randomBytes(256).toString('hex'), 
+        { id: req.user.id }, 
         config.secret
     );
-    //TODO: Save refresh_token in DB for user.
     next();
 }
 
