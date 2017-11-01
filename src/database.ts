@@ -5,6 +5,7 @@ import * as bcrypt from "bcrypt";
 var instance : Sequelize.Sequelize;
 var coordinates : Sequelize.Model<any, any>;
 var users : Sequelize.Model<any, any>;
+var userTokens : Sequelize.Model<any, any>;
 
 function initSequelize() : Sequelize.Sequelize {
     return new Sequelize(config.database, config.username, config.password, {
@@ -49,9 +50,16 @@ async function defineModels() {
             }
         }
     );
+
+    userTokens = instance.define('user_refresh_tokens', {
+        username: { type: Sequelize.STRING, unique: 'compositeIndex' },
+        token: { type: Sequelize.STRING, unique: 'compositeIndex' }
+    });
+
     await coordinates.sync();
     await users.sync();
-    return { coordinates, users };
+    await userTokens.sync();
+    return { coordinates, users, userTokens };
 }
 
 async function saveCoordinates(username: string, latitude: number, longitude: number) {
@@ -99,4 +107,12 @@ async function saveUser(username:string, email: string, password:string) {
     return user;
 }
 
-export { initialise, saveCoordinates, authenticateUser, saveUser }
+async function refreshTokenIsValid(username:string, refreshToken: string) {
+    return true;
+}
+
+async function saveRefreshTokenForUser(username:string, refreshToken: string) {
+    return true;
+}
+
+export { initialise, saveCoordinates, authenticateUser, saveUser, refreshTokenIsValid, saveRefreshTokenForUser }
