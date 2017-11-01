@@ -16,12 +16,12 @@ app.use(passport.initialize());
 
 //Helper functions
 let saveRefreshTokenForUser = async (req:any, res:any, next:any) => {
-    await database.saveRefreshTokenForUser(req.body.username, req.body.refresh_token);
+    await database.saveRefreshTokenForUser(req.body.username, req.refresh_token);
     next();
 }
 
 let refreshTokenIsValid = async (req:any, res:any, next:any) => {
-    let valid = await database.refreshTokenIsValid(req.body.username, req.body.refresh_token);
+    let valid = await database.refreshTokenIsValid(req.body.username, req.refresh_token);
     if (!valid) return res.send(401);
     next();
 }
