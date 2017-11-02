@@ -34,10 +34,7 @@ function generateToken(req:any, res:Response, next:any) {
         config.secret, 
         { expiresIn: "2h" }
     );
-    req.refresh_token = jwt.sign(
-        { id: req.user.id }, 
-        config.secret
-    );
+    req.refresh_token = crypto.randomBytes(96).toString('base64');
     next();
 }
 
