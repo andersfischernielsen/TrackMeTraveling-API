@@ -112,7 +112,7 @@ async function refreshTokenIsValid(username:string, refreshToken: string) {
             username: username,
             token: refreshToken,
         }});
-    return found !== undefined;
+    return found;
 }
 
 async function saveRefreshTokenForUser(username:string, refreshToken: string) {

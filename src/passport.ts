@@ -24,7 +24,7 @@ passport.use(new local.Strategy(
 ));
 
 function serialize(req:Request<any>, res:Response, next:any) {  
-    req.user = { id: req.user.id };
+    req.user = { id: req.user.username };
     next();
 }
 

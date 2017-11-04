@@ -21,8 +21,9 @@ let saveRefreshTokenForUser = async (req:any, res:any, next:any) => {
 }
 
 let refreshTokenIsValid = async (req:any, res:any, next:any) => {
-    let valid = await database.refreshTokenIsValid(req.body.username, req.refresh_token);
-    if (!valid) return res.send(401);
+    let found = await database.refreshTokenIsValid(req.body.username, req.body.refresh_token);
+    if (!found) return res.send(401);
+    req.user = { id: found.username };
     next();
 }
 
