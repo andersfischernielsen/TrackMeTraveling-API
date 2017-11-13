@@ -74,10 +74,10 @@ async function initialise() {
     return await setUp(instance);
 }
 
-let passwordsMatch = async (password:string, hashed: string) => 
+const passwordsMatch = async (password:string, hashed: string) => 
     await bcrypt.compare(password, hashed)
 
-let createDefaultUser = async () => 
+const createDefaultUser = async () => 
     users.findCreateFind({ where: { username: defaultUser.username, email: defaultUser.email, password: defaultUser.password }});
 
 async function authenticateUser(username:string, password:string) {
@@ -120,4 +120,6 @@ async function saveRefreshTokenForUser(username:string, refreshToken: string) {
     return created !== undefined;
 }
 
-export { initialise, saveCoordinates, authenticateUser, saveUser, refreshTokenIsValid, saveRefreshTokenForUser }
+const getCoordinatesForUser = async (username: string) => await coordinates.findOne({ where: { username: username }});
+
+export { initialise, saveCoordinates, authenticateUser, saveUser, refreshTokenIsValid, saveRefreshTokenForUser, getCoordinatesForUser }

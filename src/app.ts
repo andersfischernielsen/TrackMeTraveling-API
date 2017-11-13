@@ -9,7 +9,7 @@ import * as passport from "./passport";
 //Setup
 const app = express();
 if (app === undefined || !database.initialise()) process.exit();
-let port = Number(process.env.PORT) || 5000;
+const port = Number(process.env.PORT) || 5000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -54,5 +54,18 @@ app.post('/refreshtoken',
     saveRefreshTokenForUser,
     passport.respond
 );
+
+app.get('/user/:username', async (req, res) => {
+    let username = req.params && req.params.username;
+    if (username === undefined) return res.send(400);
+    let coordinates = await database.getCoordinatesForUser(username);
+    if (coordinates === undefined) return res.send(404);
+    let response = {
+        username: coordinates.username,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+    }
+    return res.json(response).send(200);
+});
 
 app.listen(port, 'localhost', () => console.info(`API running on port ${port}`));
